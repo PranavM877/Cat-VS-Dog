@@ -44,7 +44,7 @@ st.markdown("""
 # ---------------- MODEL DOWNLOAD ---------------- #
 MODEL_PATH = "dog_cat_model.h5"
 FILE_ID = "1rdLZBi7S_BIDfUbljvbLMrHySnoTKJbo"   # 🔹 Replace with your Google Drive file ID
-URL = "https://drive.google.com/file/d/1rdLZBi7S_BIDfUbljvbLMrHySnoTKJbo/view?usp=drive_link"
+URL =  "https://drive.google.com/uc?id=1rdLZBi7S_BIDfUbljvbLMrHySnoTKJbo"
 
 @st.cache_resource
 def load_my_model():
@@ -177,3 +177,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
