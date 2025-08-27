@@ -2,8 +2,6 @@ import streamlit as st
 import tensorflow as tf
 from PIL import Image
 import numpy as np
-import pickle
-import cv2
 import os
 import gdown
 
@@ -43,8 +41,8 @@ st.markdown("""
 
 # ---------------- MODEL DOWNLOAD ---------------- #
 MODEL_PATH = "dog_cat_model.h5"
-FILE_ID = "1rdLZBi7S_BIDfUbljvbLMrHySnoTKJbo"   # 🔹 Replace with your Google Drive file ID
-URL =  "https://drive.google.com/uc?id=1rdLZBi7S_BIDfUbljvbLMrHySnoTKJbo"
+FILE_ID = "1rdLZBi7S_BIDfUbljvbLMrHySnoTKJbo"   # 🔹 Google Drive file ID
+URL = "https://drive.google.com/uc?id=1rdLZBi7S_BIDfUbljvbLMrHySnoTKJbo"
 
 @st.cache_resource
 def load_my_model():
@@ -63,13 +61,6 @@ class InferencePreprocessor:
         img_array = np.array(img_resized, dtype=np.float32) / 255.0
         img_array = np.expand_dims(img_array, axis=0)
         return img_array
-
-    def preprocess_opencv_frame(self, frame):
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame_resized = cv2.resize(frame_rgb, self.img_size, interpolation=cv2.INTER_LANCZOS4)
-        frame_normalized = frame_resized.astype(np.float32) / 255.0
-        frame_batch = np.expand_dims(frame_normalized, axis=0)
-        return frame_batch
 
 # ---------------- CLASSIFICATION ---------------- #
 def classify_image(model, img_array):
@@ -110,62 +101,32 @@ def upload_image_interface(model, preprocessor):
             display_prediction_results(predicted_class, confidence)
 
 def webcam_interface(model, preprocessor):
-    st.header("📷 Live Webcam Mode")
-    st.info("Click 'Start Webcam' to begin, then 'Capture & Classify' to analyze the frame.")
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        start_webcam = st.button("🚀 Start Webcam", type="primary")
-    with c2:
-        stop_webcam = st.button("⏹️ Stop Webcam")
-    with c3:
-        capture_classify = st.button("📸 Capture & Classify")
+    st.header("📷 Live Camera Mode")
+    st.info("Use your device camera to capture an image.")
 
-    if 'webcam_active' not in st.session_state:
-        st.session_state.webcam_active = False
-    if start_webcam:
-        st.session_state.webcam_active = True
-    if stop_webcam:
-        st.session_state.webcam_active = False
+    img_file_buffer = st.camera_input("Take a picture")
 
-    if st.session_state.webcam_active:
-        cap = cv2.VideoCapture(0)
-        if not cap.isOpened():
-            st.error("❌ Could not access webcam.")
-            st.session_state.webcam_active = False
-            return
-        video_placeholder = st.empty()
-        results_placeholder = st.empty()
-        while st.session_state.webcam_active:
-            ret, frame = cap.read()
-            if not ret:
-                st.error("❌ Failed to capture frame.")
-                break
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            video_placeholder.image(frame_rgb, channels="RGB", use_column_width=True)
-            if capture_classify:
-                with st.spinner("🔍 Classifying current frame..."):
-                    img_array = preprocessor.preprocess_opencv_frame(frame)
-                    predicted_class, confidence = classify_image(model, img_array)
-                with results_placeholder.container():
-                    display_prediction_results(predicted_class, confidence)
-            import time
-            time.sleep(0.03)
-        cap.release()
-        cv2.destroyAllWindows()
-    else:
-        st.info("📷 Webcam is currently stopped. Click 'Start Webcam' to begin.")
+    if img_file_buffer is not None:
+        # Read captured image
+        image = Image.open(img_file_buffer).convert("RGB")
+        st.image(image, caption="Captured Image", use_column_width=True)
+
+        with st.spinner("🔍 Classifying..."):
+            img_array = preprocessor.preprocess_image_pil(image)
+            predicted_class, confidence = classify_image(model, img_array)
+        display_prediction_results(predicted_class, confidence)
 
 # ---------------- MAIN ---------------- #
 def main():
     st.markdown('<h1 class="main-header">Image Classifier</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-header">Upload a photo or use your webcam for instant results</p>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-header">Upload a photo or use your camera for instant results</p>', unsafe_allow_html=True)
 
     model = load_my_model()
     preprocessor = InferencePreprocessor((128, 128))  # adjust if your model uses other size
 
     method = st.radio(
         "Choose how you want to classify:",
-        ["Upload Image", "Use Webcam"],
+        ["Upload Image", "Use Camera"],
         index=0,
         horizontal=True
     )
@@ -177,4 +138,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
